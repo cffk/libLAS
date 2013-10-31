@@ -133,8 +133,14 @@ if(WIN32)
 
   endif()
   
-  set(CMAKE_INCLUDE_PATH c:/osgeo4w/include;$ENV{CMAKE_INCLUDE_PATH})
-  set(CMAKE_LIBRARY_PATH c:/osgeo4w/lib;$ENV{CMAKE_LIBRARY_PATH})
+  if(ENV{OSGEO4W_ROOT})
+    set(OSGEO4W_ROOT_DIR $ENV{OSGEO4W_ROOT})
+  else()
+    set(OSGEO4W_ROOT_DIR c:/OSGeo4W)
+  endif()
+
+  set(CMAKE_INCLUDE_PATH ${OSGEO4W_ROOT_DIR}/include;$ENV{CMAKE_INCLUDE_PATH})
+  set(CMAKE_LIBRARY_PATH ${OSGEO4W_ROOT_DIR}/lib;$ENV{CMAKE_LIBRARY_PATH})
 else()
 
   # Recommended C++ compilation flags
@@ -219,7 +225,10 @@ set(WITH_GDAL FALSE CACHE BOOL "Choose if GDAL support should be built")
 
 if(WITH_GDAL)
 
-  find_package(GDAL 1.7.0)
+  find_package (GDAL 1.7.0 CONFIG QUIET)
+  if (NOT GDAL_FOUND)
+    find_package (GDAL 1.7.0 MODULE)
+  endif ()
   include_directories(${GDAL_INCLUDE_DIR})
   add_definitions(-DHAVE_GDAL=1)
 
@@ -232,7 +241,10 @@ endif()
 set(WITH_GEOTIFF FALSE CACHE BOOL "Choose if GeoTIFF support should be built")
 
 if(WITH_GEOTIFF)
-  find_package(GeoTIFF 1.2.5)
+  find_package(GeoTIFF 1.2.5 CONFIG QUIET)
+  if (NOT GEOTIFF_FOUND)
+    find_package(GeoTIFF 1.2.5 MODULE)
+  endif ()
 
   if(GEOTIFF_FOUND)
     
@@ -258,7 +270,10 @@ if(WITH_GEOTIFF)
     if (WIN32)
         set(TIFF_NAMES libtiff_i)
     endif(WIN32)
-    find_package(TIFF) 
+    find_package(TIFF CONFIG QUIET)
+    if (NOT TIFF_FOUND)
+      find_package(TIFF MODULE)
+    endif ()
     if (TIFF_FOUND)
       include_directories(${TIFF_INCLUDE_DIR})
     endif()
@@ -318,6 +333,18 @@ set(LIBLAS_LIB_DIR ${LIBLAS_LIB_SUBDIR})
 set(LIBLAS_INCLUDE_DIR ${LIBLAS_INCLUDE_SUBDIR})
 set(LIBLAS_DATA_DIR ${LIBLAS_DATA_SUBDIR})
 
+if (NOT WIN32)
+  # Set the run time path for shared libraries for non-Windows machines.
+  # (1) include link path for external packages.
+  set (CMAKE_INSTALL_RPATH_USE_LINK_PATH TRUE)
+  # (2) include installed path for libLAS
+  list (FIND CMAKE_PLATFORM_IMPLICIT_LINK_DIRECTORIES
+    "${CMAKE_INSTALL_PREFIX}/${LIBLAS_LIB_DIR}" SYSDIR)
+  if (SYSDIR LESS 0)
+    set (CMAKE_INSTALL_RPATH "${CMAKE_INSTALL_PREFIX}/${LIBLAS_LIB_DIR}")
+  endif ()
+endif ()
+
 ###############################################################################
 # Installation commands
 
@@ -368,8 +395,6 @@ SET(CPACK_PACKAGE_VERSION_PATCH ${LIBLAS_VERSION_MINOR})
 
 SET(CPACK_SOURCE_GENERATOR "TGZ;ZIP;TBZ2")
 SET(CPACK_CMAKE_GENERATOR "Unix Makefiles")
-
-
 
 set(CPACK_SOURCE_PACKAGE_FILE_NAME
   "${CMAKE_PROJECT_NAME}-${VERSION}")

@@ -180,22 +180,6 @@ install(TARGETS ${LIBLAS_UTILITIES}
 
 if(UNIX)
 
-  set(LIBLAS_UTILS_RPATH ${CMAKE_INSTALL_PREFIX}/lib ${Boost_LIBRARY_DIRS})
-  if(LASZIP_FOUND)
-    get_filename_component(LASZIP_LIBRARY_DIRS ${LASZIP_LIBRARY} PATH)
-    set (LIBLAS_UTILS_RPATH ${LIBLAS_UTILS_RPATH} ${LASZIP_LIBRARY_DIRS})
-  endif()
-  if(GEOTIFF_FOUND)
-    get_filename_component(GEOTIFF_LIBRARY_DIRS ${GEOTIFF_LIBRARY} PATH)
-    set (LIBLAS_UTILS_RPATH ${LIBLAS_UTILS_RPATH} ${GEOTIFF_LIBRARY_DIRS})
-  endif()
-  if(GDAL_FOUND)
-    get_filename_component(GDAL_LIBRARY_DIRS ${GDAL_LIBRARY} PATH)
-    set (LIBLAS_UTILS_RPATH ${LIBLAS_UTILS_RPATH} ${GDAL_LIBRARY_DIRS})
-  endif()
-  set_target_properties(${LIBLAS_UTILITIES} PROPERTIES
-    INSTALL_RPATH "${LIBLAS_UTILS_RPATH}")
-
   if(WITH_PKGCONFIG)
     
     set(PKGCFG_PREFIX "${CMAKE_INSTALL_PREFIX}")
@@ -246,3 +230,17 @@ if(UNIX)
   endif()
 
 endif()
+
+if (WIN32)
+  # Install all the runtime support
+  # System libraries (release and debug)
+  set (CMAKE_INSTALL_DEBUG_LIBRARIES ON)
+  include (InstallRequiredSystemLibraries)
+  set (_EXEC "${CMAKE_INSTALL_PREFIX}/bin/lasinfo${CMAKE_EXECUTABLE_SUFFIX}")
+  set (LIB_SEARCH "${GDAL_BINARY_DIRS}" "${GEOTIFF_BINARY_DIRS}")
+  # Install dependent libraries (release or debug)
+  install (CODE "
+    include (BundleUtilities)
+    fixup_bundle (\"${_EXEC}\" \"\" \"${LIB_SEARCH}\")
+")
+endif ()
