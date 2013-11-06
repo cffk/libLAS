@@ -237,7 +237,9 @@ if (WIN32)
   set (CMAKE_INSTALL_DEBUG_LIBRARIES ON)
   include (InstallRequiredSystemLibraries)
   set (_EXEC "${CMAKE_INSTALL_PREFIX}/bin/lasinfo${CMAKE_EXECUTABLE_SUFFIX}")
-  set (LIB_SEARCH "${GDAL_BINARY_DIRS}" "${GEOTIFF_BINARY_DIRS}")
+  set (LIB_SEARCH "${GDAL_BINARY_DIRS}" "${GEOTIFF_BINARY_DIRS}"
+    "${LASZIP_BINARY_DIRS}")
+  message(STATUS "DEBUG XXXXXXXXXXX ${LIB_SEARCH}")
   # Install dependent libraries (release or debug)
   install (CODE "
     include (BundleUtilities)

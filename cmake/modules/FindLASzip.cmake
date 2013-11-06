@@ -8,6 +8,8 @@
 # LASZIP_INCLUDE_DIR = where to find the library headers also defined,
 #                       but not for general use are
 # LASZIP_LIBRARY     = where to find the library.
+# LASZIP_LIBRARY_DIRS = directory for library
+# LASZIP_BINARY_DIRS = directory for dll
 # LASZIP_VERSION     = version of library which was found, e.g. "1.2.5"
 #
 # Copyright (c) 2009 Mateusz Loskot <mateusz@loskot.net>
@@ -55,9 +57,11 @@ FIND_LIBRARY(LASZIP_LIBRARY
   /usr/local/lib
   ${OSGEO4W_ROOT_DIR}/lib)
 
-IF(LASZIP_FOUND)
+if (LASZIP_LIBRARY)
   SET(LASZIP_LIBRARIES ${LASZIP_LIBRARY})
-ENDIF()
+  get_filename_component(LASZIP_LIBRARY_DIRS ${LASZIP_LIBRARY} PATH)
+  get_filename_component(LASZIP_BINARY_DIRS ${LASZIP_LIBRARY_DIRS}/../bin ABSOLUTE)
+endif ()
 
 IF(LASZIP_INCLUDE_DIR)
   SET(LASZIP_VERSION 0)
