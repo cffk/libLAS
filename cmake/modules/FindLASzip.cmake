@@ -7,9 +7,7 @@
 # LASZIP_LIBRARIES   = full path to the library
 # LASZIP_INCLUDE_DIR = where to find the library headers also defined,
 #                       but not for general use are
-# LASZIP_LIBRARY     = where to find the library.
-# LASZIP_LIBRARY_DIRS = directory for library
-# LASZIP_BINARY_DIRS = directory for dll
+# LASZIP_LIBRARY     = where to find the PROJ.4 library.
 # LASZIP_VERSION     = version of library which was found, e.g. "1.2.5"
 #
 # Copyright (c) 2009 Mateusz Loskot <mateusz@loskot.net>
@@ -33,7 +31,7 @@ IF(WIN32)
     SET(OSGEO4W_ROOT_DIR $ENV{OSGEO4W_ROOT})
     MESSAGE(STATUS "Trying OSGeo4W using environment variable OSGEO4W_ROOT=$ENV{OSGEO4W_ROOT}")
   ELSE()
-    SET(OSGEO4W_ROOT_DIR c:/OSGeo4W)
+    SET(OSGEO4W_ROOT_DIR c:/OSGeo4W64)
     MESSAGE(STATUS "Trying OSGeo4W using default location OSGEO4W_ROOT=${OSGEO4W_ROOT_DIR}")
   ENDIF()
 ENDIF()
@@ -57,11 +55,9 @@ FIND_LIBRARY(LASZIP_LIBRARY
   /usr/local/lib
   ${OSGEO4W_ROOT_DIR}/lib)
 
-if (LASZIP_LIBRARY)
+IF(LASZIP_FOUND)
   SET(LASZIP_LIBRARIES ${LASZIP_LIBRARY})
-  get_filename_component(LASZIP_LIBRARY_DIRS ${LASZIP_LIBRARY} PATH)
-  get_filename_component(LASZIP_BINARY_DIRS ${LASZIP_LIBRARY_DIRS}/../bin ABSOLUTE)
-endif ()
+ENDIF()
 
 IF(LASZIP_INCLUDE_DIR)
   SET(LASZIP_VERSION 0)

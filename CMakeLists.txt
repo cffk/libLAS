@@ -10,11 +10,13 @@ project(libLAS)
 
 
 SET(LIBLAS_VERSION_MAJOR "1")
-SET(LIBLAS_VERSION_MINOR "7")
+SET(LIBLAS_VERSION_MINOR "8")
 SET(LIBLAS_VERSION_PATCH "0")
 set(VERSION "${LIBLAS_VERSION_MAJOR}.${LIBLAS_VERSION_MINOR}.${LIBLAS_VERSION_PATCH}")
-SET(LIBLAS_LIB_SOVERSION "2.2.0")
-SET(LIBLAS_C_LIB_SOVERSION "2.2.0")
+SET(LIBLAS_LIB_VERSION "2.3.0")
+SET(LIBLAS_LIB_SOVERSION "3")
+SET(LIBLAS_C_LIB_VERSION "2.3.0")
+SET(LIBLAS_C_LIB_SOVERSION "3")
 SET(OSGEO4W_UPSTREAM_RELEASE "1")
 
 if(WIN32)
@@ -74,7 +76,14 @@ set(CMAKE_COLOR_MAKEFILE ON)
 mark_as_advanced(CMAKE_VERBOSE_MAKEFILE)
 
 # Path to additional CMake modules
-set(CMAKE_MODULE_PATH ${libLAS_SOURCE_DIR}/cmake/modules ${CMAKE_MODULE_PATH})
+set(CMAKE_MODULE_PATH "${libLAS_SOURCE_DIR}/cmake/modules" ${CMAKE_MODULE_PATH})
+if (CMAKE_MAJOR_VERSION GREATER 2)
+    cmake_policy(SET CMP0042 OLD)
+endif()
+
+if (CMAKE_SYSTEM_NAME MATCHES "Linux")
+set(CMAKE_SKIP_RPATH ON)
+endif()
 
 ###############################################################################
 # General build settings
@@ -90,7 +99,7 @@ if(NOT MSVC_IDE)
 endif()
 
 # TODO: Still testing the output paths --mloskot
-set(LIBLAS_BUILD_OUTPUT_DIRECTORY ${PROJECT_BINARY_DIR}/bin/${CMAKE_BUILD_TYPE})
+set(LIBLAS_BUILD_OUTPUT_DIRECTORY "${PROJECT_BINARY_DIR}/bin/${CMAKE_BUILD_TYPE}")
 
 # Output directory in which to build RUNTIME target files.
 set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${LIBLAS_BUILD_OUTPUT_DIRECTORY})
@@ -109,7 +118,7 @@ file(WRITE "README.txt" "${README}")
 
 if(WIN32)
   if (MSVC)
-    if (MSVC80 OR MSVC90 OR MSVC10)
+    if (MSVC80 OR MSVC90 OR MSVC10 OR MSVC11 OR MSVC12)
       add_definitions(-D_CRT_SECURE_NO_DEPRECATE)
       add_definitions(-D_CRT_SECURE_NO_WARNINGS)
       add_definitions(-D_CRT_NONSTDC_NO_WARNING)
@@ -133,14 +142,8 @@ if(WIN32)
 
   endif()
   
-  if(ENV{OSGEO4W_ROOT})
-    set(OSGEO4W_ROOT_DIR $ENV{OSGEO4W_ROOT})
-  else()
-    set(OSGEO4W_ROOT_DIR c:/OSGeo4W)
-  endif()
-
-  set(CMAKE_INCLUDE_PATH ${OSGEO4W_ROOT_DIR}/include;$ENV{CMAKE_INCLUDE_PATH})
-  set(CMAKE_LIBRARY_PATH ${OSGEO4W_ROOT_DIR}/lib;$ENV{CMAKE_LIBRARY_PATH})
+  set(CMAKE_INCLUDE_PATH c:/osgeo4w64/include;$ENV{CMAKE_INCLUDE_PATH})
+  set(CMAKE_LIBRARY_PATH c:/osgeo4w64/lib;$ENV{CMAKE_LIBRARY_PATH})
 else()
 
   # Recommended C++ compilation flags
@@ -150,13 +153,13 @@ else()
   # enum) 2012-09-05.  Remove -Wcast-qual -Wfloat-equal
   # -Wredundant-decls to suppress the multitude of warning messages.
   set(LIBLAS_COMMON_CXX_FLAGS
-	"-ansi -Wall -Wpointer-arith -Wcast-align -Wno-long-long")
+	" -Wextra -Wall -Wno-unused-parameter -Wno-unused-variable -Wpointer-arith -Wcast-align -Wcast-qual -Wfloat-equal -Wredundant-decls -Wno-long-long")
 
   if(CMAKE_COMPILER_IS_GNUCC OR CMAKE_COMPILER_IS_GNUCXX)
 
     set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} ${LIBLAS_COMMON_CXX_FLAGS}")
     if (CMAKE_COMPILER_IS_GNUCXX)
-      set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++98")
+      set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++98 -ansi")
     endif()
 
   elseif("${CMAKE_CXX_COMPILER_ID}" MATCHES "Clang" OR "${CMAKE_CXX_COMPILER}" MATCHES "clang")
@@ -190,8 +193,8 @@ if(WIN32)
   endif(MSVC)
 endif(WIN32)
 
-# NOTE: Add iostreams to COMPONENTS list to enable bigfile_boost_iostreams_test
-find_package(Boost 1.38 COMPONENTS program_options thread REQUIRED)
+find_package(Threads)
+find_package(Boost 1.38 COMPONENTS program_options thread system iostreams filesystem REQUIRED)
 
 if(Boost_FOUND AND Boost_PROGRAM_OPTIONS_FOUND)
   include_directories(${Boost_INCLUDE_DIRS})
@@ -207,83 +210,61 @@ set(WITH_LASZIP FALSE CACHE BOOL "Choose if LASzip support should be built")
 set(WITH_STATIC_LASZIP FALSE CACHE BOOL "Choose of LASzip should be statically linked")
 mark_as_advanced(WITH_STATIC_LASZIP)
 
-if (WITH_LASZIP)
-    find_package(LASzip 2.0.1)
-
-    if(LASZIP_FOUND)    
-        set(CMAKE_REQUIRED_LIBRARIES ${LASZIP_LIBRARY})
-        include_directories(${LASZIP_INCLUDE_DIR})
-        add_definitions(-DHAVE_LASZIP=1)
-        mark_as_advanced(CLEAR LASZIP_INCLUDE_DIR) 
-        mark_as_advanced(CLEAR LASZIP_LIBRARY) 
-        mark_as_advanced(CLEAR LASZIP_VERSION) 
-    endif()
+find_package(LASzip 2.0.1)
+if(LASZIP_FOUND)    
+    include_directories(${LASZIP_INCLUDE_DIR})
+    add_definitions(-DHAVE_LASZIP=1)
+    mark_as_advanced(CLEAR LASZIP_INCLUDE_DIR) 
+    mark_as_advanced(CLEAR LASZIP_LIBRARY) 
+    mark_as_advanced(CLEAR LASZIP_VERSION) 
+    set(WITH_LASZIP TRUE)
+else()
+    set(LASZIP_LIBRARY "")
+    set(LASZIP_INCLUDE_DIR "")
 endif()
 
 # GDAL/OGR support - optional, default=OFF
 set(WITH_GDAL FALSE CACHE BOOL "Choose if GDAL support should be built")
 
-if(WITH_GDAL)
-
-  find_package (GDAL 1.7.0 CONFIG QUIET)
-  if (NOT GDAL_FOUND)
-    find_package (GDAL 1.7.0 MODULE)
-  endif ()
+find_package(GDAL 1.7.0)
+if (GDAL_FOUND)
   include_directories(${GDAL_INCLUDE_DIR})
   add_definitions(-DHAVE_GDAL=1)
-
+  set(WITH_GDAL TRUE)
   mark_as_advanced(CLEAR GDAL_INCLUDE_DIR) 
   mark_as_advanced(CLEAR GDAL_LIBRARY) 
-
 endif()
 
 # GeoTIFF support - optional, default=OFF
 set(WITH_GEOTIFF FALSE CACHE BOOL "Choose if GeoTIFF support should be built")
 
-if(WITH_GEOTIFF)
-  find_package(GeoTIFF 1.2.5 CONFIG QUIET)
-  if (NOT GEOTIFF_FOUND)
-    find_package(GeoTIFF 1.2.5 MODULE)
-  endif ()
-
-  if(GEOTIFF_FOUND)
-    
+find_package(GeoTIFF 1.2.5)
+if(GEOTIFF_FOUND)
+    set(WITH_GEOTIFF TRUE)
     # Confirm required API is available
     include(CheckFunctionExists) 
-    set(CMAKE_REQUIRED_LIBRARIES ${GEOTIFF_LIBRARY})
-    #       check_function_exists(ST_Create HAVE_ST_CREATE)
-    
-    #        if(NOT HAVE_ST_CREATE)
-    #            set(GEOTIFF_FOUND) # Reset to NOT found for GeoTIFF
-    #            message(FATAL_ERROR "GeoTIFF support requires libgeotiff 1.2.5 or newer.")
-    #        else()
     include_directories(${GEOTIFF_INCLUDE_DIR})
     add_definitions(-DHAVE_LIBGEOTIFF=1)
-    #        endif()
-  endif()
-
-  # Determine libTIFF availability, required
-  if (GEOTIFF_FOUND)
 
     mark_as_advanced(CLEAR TIFF_INCLUDE_DIR) 
     mark_as_advanced(CLEAR TIFF_LIBRARY) 
     if (WIN32)
         set(TIFF_NAMES libtiff_i)
     endif(WIN32)
-    find_package(TIFF CONFIG QUIET)
-    if (NOT TIFF_FOUND)
-      find_package(TIFF MODULE)
-    endif ()
+    find_package(TIFF) 
     if (TIFF_FOUND)
       include_directories(${TIFF_INCLUDE_DIR})
     endif()
-  endif()
+else()
+    set(GEOTIFF_LIBRARY "")
+    set(GEOTIFF_INCLUDE_DIR "")
 endif()
+
 
 if(WITH_GDAL)
   if (NOT GEOTIFF_FOUND)
     message(FATAL_ERROR
-      "GDAL support requires GeoTIFF library which was not selected")
+      "GDAL support requires GeoTIFF library which was not found")
   endif()
 endif()
 
@@ -333,18 +314,6 @@ set(LIBLAS_LIB_DIR ${LIBLAS_LIB_SUBDIR})
 set(LIBLAS_INCLUDE_DIR ${LIBLAS_INCLUDE_SUBDIR})
 set(LIBLAS_DATA_DIR ${LIBLAS_DATA_SUBDIR})
 
-if (NOT WIN32)
-  # Set the run time path for shared libraries for non-Windows machines.
-  # (1) include link path for external packages.
-  set (CMAKE_INSTALL_RPATH_USE_LINK_PATH TRUE)
-  # (2) include installed path for libLAS
-  list (FIND CMAKE_PLATFORM_IMPLICIT_LINK_DIRECTORIES
-    "${CMAKE_INSTALL_PREFIX}/${LIBLAS_LIB_DIR}" SYSDIR)
-  if (SYSDIR LESS 0)
-    set (CMAKE_INSTALL_RPATH "${CMAKE_INSTALL_PREFIX}/${LIBLAS_LIB_DIR}")
-  endif ()
-endif ()
-
 ###############################################################################
 # Installation commands
 
@@ -393,8 +362,10 @@ SET(CPACK_PACKAGE_VERSION_MAJOR ${LIBLAS_VERSION_MAJOR})
 SET(CPACK_PACKAGE_VERSION_MINOR ${LIBLAS_VERSION_MINOR})
 SET(CPACK_PACKAGE_VERSION_PATCH ${LIBLAS_VERSION_MINOR})
 
-SET(CPACK_SOURCE_GENERATOR "TGZ;ZIP;TBZ2")
+SET(CPACK_SOURCE_GENERATOR "TBZ2")
 SET(CPACK_CMAKE_GENERATOR "Unix Makefiles")
+
+
 
 set(CPACK_SOURCE_PACKAGE_FILE_NAME
   "${CMAKE_PROJECT_NAME}-${VERSION}")
@@ -403,14 +374,22 @@ list(APPEND CPACK_SOURCE_IGNORE_FILES "/test/data/TO_core_last_zoom.las")
 list(APPEND CPACK_SOURCE_IGNORE_FILES "_CPack_Packages")
 list(APPEND CPACK_SOURCE_IGNORE_FILES ".gz")
 list(APPEND CPACK_SOURCE_IGNORE_FILES ".bz2")
-list(APPEND CPACK_SOURCE_IGNORE_FILES ".hg")
+list(APPEND CPACK_SOURCE_IGNORE_FILES ".git")
 list(APPEND CPACK_SOURCE_IGNORE_FILES "README")
 list(APPEND CPACK_SOURCE_IGNORE_FILES "HOWTORELEASE.txt")
 list(APPEND CPACK_SOURCE_IGNORE_FILES "/doc/_static/files")
 
 list(APPEND CPACK_SOURCE_IGNORE_FILES "CMakeCache.txt")
+list(APPEND CPACK_SOURCE_IGNORE_FILES "CMakeFiles")
 
+file(GLOB DISTS "libLAS*")
+list(APPEND CPACK_SOURCE_IGNORE_FILES ${DISTS})
+
+list(APPEND CPACK_SOURCE_IGNORE_FILES "Makefile")
+list(APPEND CPACK_SOURCE_IGNORE_FILES "cmake_install.cmak")
 list(APPEND CPACK_SOURCE_IGNORE_FILES "CPackConfig.cmake")
+list(APPEND CPACK_SOURCE_IGNORE_FILES "CPackSourceConfig.cmake")
+list(APPEND CPACK_SOURCE_IGNORE_FILES "CTestTestfile.cmake")
 list(APPEND CPACK_SOURCE_IGNORE_FILES "schemas")
 list(APPEND CPACK_SOURCE_IGNORE_FILES "hobu-config.bat")
 list(APPEND CPACK_SOURCE_IGNORE_FILES "mpg-config.bat")
@@ -422,6 +401,6 @@ include(CPack)
 
 add_custom_target(dist COMMAND ${CMAKE_MAKE_PROGRAM} package_source)
 
-#if (WIN32)
-#    include(BuildOSGeo4W)
-#endif(WIN32)
+if (WIN32)
+    include(BuildOSGeo4W)
+endif(WIN32)

@@ -14,12 +14,8 @@ include_directories(
 ###############################################################################
 # Collect programs to build
 
-set(LASINFO_OLD lasinfo-old)
 set(LASINFO lasinfo)
-set(LASMERGE lasmerge)
 set(LAS2LAS las2las)
-set(LAS2LAS_OLD las2las-old)
-set(LAS2TXT_OLD las2txt-old)
 set(LAS2TXT las2txt)
 set(TXT2LAS txt2las)
 set(TS2LAS ts2las)
@@ -45,8 +41,8 @@ endif()
 
 
 set(LIBLAS_UTILITIES
-    ${LASINFO_OLD} ${LASINFO} ${LASMERGE} ${LAS2LAS} ${LAS2TXT_OLD} ${TXT2LAS} 
-    ${LAS2OGR} ${LAS2LAS} ${LAS2LAS_OLD} ${LASBLOCK} ${TS2LAS}  ${LAS2TXT} )
+    ${LASINFO} ${LAS2LAS} ${TXT2LAS} 
+    ${LAS2OGR} ${LAS2LAS} ${LASBLOCK} ${TS2LAS}  ${LAS2TXT} )
 
 # TODO: Experimental and requires testing --mloskot
 # Generate user-specific settings for Visual Studio project
@@ -72,31 +68,12 @@ endif()
 
 set(APPS_CPP_DEPENDENCIES
     ${LIBLAS_LIB_NAME}
-    ${TIFF_LIBRARY}
-    ${GEOTIFF_LIBRARY}
-    ${GDAL_LIBRARY}
-    ${SPATIALINDEX_LIBRARY}
-	${LASZIP_LIBRARY}
-    ${Boost_LIBRARIES})
+)
 
-link_directories(${Boost_LIBRARY_DIRS})
+# link_directories(${Boost_LIBRARY_DIRS})
 
 #    add_executable(lasschematest lasschematest.cpp laskernel.cpp)
 #    target_link_libraries(lasschematest ${APPS_CPP_DEPENDENCIES} ${LIBXML2_LIBRARIES})
-
-# Build lasinfo
-if(LASINFO_OLD)
-    set(LASINFO_OLD_SRC lascommon.c ${LASINFO_OLD}.c)
-    add_executable(${LASINFO_OLD} ${LASINFO_OLD_SRC})
-    target_link_libraries(${LASINFO_OLD} ${LIBLAS_C_LIB_NAME})
-endif()
-
-# Build las2las
-if(LAS2LAS_OLD)
-    set(LAS2LAS_OLD_SRC lascommon.c ${LAS2LAS_OLD}.c)
-    add_executable(${LAS2LAS_OLD} ${LAS2LAS_OLD_SRC})
-    target_link_libraries(${LAS2LAS_OLD} ${LIBLAS_C_LIB_NAME})
-endif()
 
 
 if(LAS2LAS)
@@ -107,13 +84,6 @@ endif()
 if(LASINFO)
     add_executable(${LASINFO} lasinfo.cpp laskernel.cpp )
     target_link_libraries(${LASINFO} ${APPS_CPP_DEPENDENCIES}  )
-endif()
-
-# Build las2txt
-if(LAS2TXT_OLD)
-    set(LAS2TXT_OLD_SRC lascommon.c ${LAS2TXT}.c)
-    add_executable(${LAS2TXT_OLD} ${LAS2TXT_OLD_SRC})
-    target_link_libraries(${LAS2TXT_OLD} ${LIBLAS_C_LIB_NAME})
 endif()
 
 if(LAS2TXT)
@@ -131,13 +101,6 @@ endif()
 if(TS2LAS)
     add_executable(${TS2LAS} ts2las.cpp laskernel.cpp)
     target_link_libraries(${TS2LAS} ${APPS_CPP_DEPENDENCIES} )
-endif()
-
-# Build lasmerge
-if(LASMERGE)
-    set(LASMERGE_SRC lascommon.c ${LASMERGE}.c)
-    add_executable(${LASMERGE} ${LASMERGE_SRC})
-    target_link_libraries(${LASMERGE} ${LIBLAS_C_LIB_NAME})
 endif()
 
 # Build lasblock
@@ -179,6 +142,22 @@ install(TARGETS ${LIBLAS_UTILITIES}
 
 
 if(UNIX)
+
+  set(LIBLAS_UTILS_RPATH ${CMAKE_INSTALL_PREFIX}/lib ${Boost_LIBRARY_DIRS})
+  if(LASZIP_FOUND)
+    get_filename_component(LASZIP_LIBRARY_DIRS ${LASZIP_LIBRARY} PATH)
+    set (LIBLAS_UTILS_RPATH ${LIBLAS_UTILS_RPATH} ${LASZIP_LIBRARY_DIRS})
+  endif()
+  if(GEOTIFF_FOUND)
+    get_filename_component(GEOTIFF_LIBRARY_DIRS ${GEOTIFF_LIBRARY} PATH)
+    set (LIBLAS_UTILS_RPATH ${LIBLAS_UTILS_RPATH} ${GEOTIFF_LIBRARY_DIRS})
+  endif()
+  if(GDAL_FOUND)
+    get_filename_component(GDAL_LIBRARY_DIRS ${GDAL_LIBRARY} PATH)
+    set (LIBLAS_UTILS_RPATH ${LIBLAS_UTILS_RPATH} ${GDAL_LIBRARY_DIRS})
+  endif()
+  set_target_properties(${LIBLAS_UTILITIES} PROPERTIES
+    INSTALL_RPATH "${LIBLAS_UTILS_RPATH}")
 
   if(WITH_PKGCONFIG)
     
@@ -230,19 +209,3 @@ if(UNIX)
   endif()
 
 endif()
-
-if (WIN32)
-  # Install all the runtime support
-  # System libraries (release and debug)
-  set (CMAKE_INSTALL_DEBUG_LIBRARIES ON)
-  include (InstallRequiredSystemLibraries)
-  set (_EXEC "${CMAKE_INSTALL_PREFIX}/bin/lasinfo${CMAKE_EXECUTABLE_SUFFIX}")
-  set (LIB_SEARCH "${GDAL_BINARY_DIRS}" "${GEOTIFF_BINARY_DIRS}"
-    "${LASZIP_BINARY_DIRS}")
-  message(STATUS "DEBUG XXXXXXXXXXX ${LIB_SEARCH}")
-  # Install dependent libraries (release or debug)
-  install (CODE "
-    include (BundleUtilities)
-    fixup_bundle (\"${_EXEC}\" \"\" \"${LIB_SEARCH}\")
-")
-endif ()

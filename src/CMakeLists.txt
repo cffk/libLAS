@@ -24,7 +24,6 @@ set(LIBLAS_HPP
   ${LIBLAS_HEADERS_DIR}/exception.hpp
   ${LIBLAS_HEADERS_DIR}/export.hpp
   ${LIBLAS_HEADERS_DIR}/factory.hpp 
-  ${LIBLAS_HEADERS_DIR}/guid.hpp
   ${LIBLAS_HEADERS_DIR}/iterator.hpp
   ${LIBLAS_HEADERS_DIR}/bounds.hpp
   ${LIBLAS_HEADERS_DIR}/classification.hpp
@@ -86,7 +85,6 @@ set(LIBLAS_DETAIL_HPP
   ${LIBLAS_HEADERS_DIR}/detail/endian.hpp
   ${LIBLAS_HEADERS_DIR}/detail/fwd.hpp
   ${LIBLAS_HEADERS_DIR}/detail/pointrecord.hpp
-  ${LIBLAS_HEADERS_DIR}/detail/sha1.hpp
   ${LIBLAS_HEADERS_DIR}/detail/timer.hpp
   ${LIBLAS_HEADERS_DIR}/detail/private_utility.hpp
   ${LIBLAS_HEADERS_DIR}/detail/singleton.hpp
@@ -131,7 +129,9 @@ set(LIBLAS_CPP
 
 set(LIBLAS_DETAIL_CPP
   detail/utility.cpp
-  detail/zippoint.cpp)
+  detail/sha1.cpp
+  detail/zippoint.cpp
+)
   
 set(LIBLAS_DETAIL_INDEX_CPP
   detail/index/indexcell.cpp
@@ -229,27 +229,26 @@ target_link_libraries(${LIBLAS_LIB_NAME}
   ${Boost_LIBRARIES})
 
 target_link_libraries(${LIBLAS_C_LIB_NAME}
-  ${LIBLAS_LIB_NAME}
-  ${TIFF_LIBRARY}
-  ${GEOTIFF_LIBRARY}
-  ${GDAL_LIBRARY}
-  ${LASZIP_LIBRARY}
-  ${Boost_LIBRARIES})
+  ${LIBLAS_LIB_NAME} )
 
 set_target_properties(${LIBLAS_LIB_NAME}
-  PROPERTIES SOVERSION "${LIBLAS_LIB_SOVERSION}" )
+  PROPERTIES
+  VERSION "${LIBLAS_LIB_VERSION}"
+  SOVERSION "${LIBLAS_LIB_SOVERSION}")
 set_target_properties(${LIBLAS_C_LIB_NAME}
-  PROPERTIES SOVERSION "${LIBLAS_C_LIB_SOVERSION}" )
+  PROPERTIES
+  VERSION "${LIBLAS_C_LIB_VERSION}"
+  SOVERSION "${LIBLAS_C_LIB_SOVERSION}")
 
 if (APPLE)
   set_target_properties(
     ${LIBLAS_C_LIB_NAME}
     PROPERTIES
-    INSTALL_NAME_DIR "${CMAKE_INSTALL_PREFIX}/lib")
+    INSTALL_NAME_DIR "@rpath" BUILD_WITH_INSTALL_RPATH ON)
   set_target_properties(
     ${LIBLAS_LIB_NAME}
     PROPERTIES
-    INSTALL_NAME_DIR "${CMAKE_INSTALL_PREFIX}/lib")
+    INSTALL_NAME_DIR "@rpath" BUILD_WITH_INSTALL_RPATH ON)
 endif()
 
 ###############################################################################
